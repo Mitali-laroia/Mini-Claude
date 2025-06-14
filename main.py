@@ -57,16 +57,29 @@ def read_file(file_path: str):
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
-def write_file(file_path: str, content: str):
-    """Write content to a file"""
+def write_file(file_path_and_content: str, content: str = None):
+    """Write content to a file - handles both single string with || separator and two separate args"""
     try:
+        # Handle the case where input is "filepath||content" format
+        if content is None and "||" in file_path_and_content:
+            parts = file_path_and_content.split("||", 1)
+            file_path = parts[0].strip()
+            file_content = parts[1] if len(parts) > 1 else ""
+        # Handle the case where file_path and content are separate
+        elif content is not None:
+            file_path = file_path_and_content.strip()
+            file_content = content
+        else:
+            file_path = file_path_and_content.strip()
+            file_content = ""
+        
         # Create directory if it doesn't exist
         directory = os.path.dirname(file_path)
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
         
         with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(content)
+            file.write(file_content)
         return f"File '{file_path}' written successfully"
     except Exception as e:
         return f"Error writing file: {str(e)}"
@@ -141,70 +154,6 @@ def list_files(directory: str = "."):
     except Exception as e:
         return f"Error listing files: {str(e)}"
 
-def create_project(project_name: str, project_type: str = "react"):
-    """Create a new project structure for React, Node.js, or full-stack apps"""
-    try:
-        if project_type.lower() == "react":
-            result = subprocess.run(["npx", "create-react-app", project_name], 
-                                  capture_output=True, text=True, timeout=300)
-        elif project_type.lower() == "nextjs":
-            result = subprocess.run(["npx", "create-next-app@latest", project_name], 
-                                  capture_output=True, text=True, timeout=300)
-        elif project_type.lower() == "express":
-            # Create Express.js project structure
-            os.makedirs(project_name, exist_ok=True)
-            os.chdir(project_name)
-            
-            # Initialize npm project
-            result1 = subprocess.run(["npm", "init", "-y"], 
-                                   capture_output=True, text=True, timeout=60)
-            
-            # Install express
-            result2 = subprocess.run(["npm", "install", "express"], 
-                                   capture_output=True, text=True, timeout=120)
-            
-            # Create basic server file
-            server_code = '''
-                            const express = require('express');
-                            const app = express();
-                            const PORT = process.env.PORT || 3000;
-
-                            app.use(express.json());
-
-                            app.get('/', (req, res) => {
-                                res.json({ message: 'Hello from Express server!' });
-                            });
-
-                            app.listen(PORT, () => {
-                                console.log(`Server running on port ${PORT}`);
-                            });'''
-            
-            with open('server.js', 'w') as f:
-                f.write(server_code)
-            
-            os.chdir('..')
-            
-            if result1.returncode == 0 and result2.returncode == 0:
-                return f"Express.js project '{project_name}' created successfully with basic server setup"
-            else:
-                return f"Error creating Express project: {result1.stderr or result2.stderr}"
-                
-        elif project_type.lower() == "vite":
-            result = subprocess.run(["npm", "create", "vite@latest", project_name, "--template", "react"], 
-                                  capture_output=True, text=True, timeout=180)
-        else:
-            return f"Unsupported project type: {project_type}. Use 'react', 'nextjs', 'express', or 'vite'"
-        
-        if result.returncode == 0:
-            return f"{project_type.title()} project '{project_name}' created successfully:\n{result.stdout}"
-        else:
-            return f"Failed to create {project_type} project '{project_name}':\n{result.stderr}"
-            
-    except subprocess.TimeoutExpired:
-        return f"Project creation for '{project_name}' timed out"
-    except Exception as e:
-        return f"Error creating project: {str(e)}"
-    
 def debug_error(error_message: str, file_path: str = ""):
     """Analyze error messages and provide debugging suggestions for JS/Python"""
     debugging_tips = {
@@ -258,6 +207,79 @@ def debug_error(error_message: str, file_path: str = ""):
     
     return result
 
+def create_project(project_info: str, project_type: str = "react"):
+    """Create a new project structure for React, Node.js, or full-stack apps - handles 'name||type' format"""
+    try:
+        # Handle the case where input is "project_name||project_type" format
+        if "||" in project_info:
+            parts = project_info.split("||", 1)
+            project_name = parts[0].strip()
+            project_type = parts[1].strip() if len(parts) > 1 else "react"
+        else:
+            project_name = project_info.strip()
+        
+        if project_type.lower() == "react":
+            result = subprocess.run(["npx", "create-react-app", project_name], 
+                                  capture_output=True, text=True, timeout=300)
+        elif project_type.lower() == "nextjs":
+            result = subprocess.run(["npx", "create-next-app@latest", project_name], 
+                                  capture_output=True, text=True, timeout=300)
+        elif project_type.lower() == "express":
+            # Create Express.js project structure
+            os.makedirs(project_name, exist_ok=True)
+            original_dir = os.getcwd()
+            os.chdir(project_name)
+            
+            # Initialize npm project
+            result1 = subprocess.run(["npm", "init", "-y"], 
+                                   capture_output=True, text=True, timeout=60)
+            
+            # Install express
+            result2 = subprocess.run(["npm", "install", "express"], 
+                                   capture_output=True, text=True, timeout=120)
+            
+            # Create basic server file
+            server_code = '''
+            const express = require('express');
+            const app = express();
+            const PORT = process.env.PORT || 3000;
+
+            app.use(express.json());
+
+            app.get('/', (req, res) => {
+                res.json({ message: 'Hello from Express server!' });
+            });
+
+            app.listen(PORT, () => {
+                console.log(`Server running on port ${PORT}`);
+            });
+            '''
+            
+            with open('server.js', 'w') as f:
+                f.write(server_code)
+            
+            os.chdir(original_dir)
+            
+            if result1.returncode == 0 and result2.returncode == 0:
+                return f"Express.js project '{project_name}' created successfully with basic server setup"
+            else:
+                return f"Error creating Express project: {result1.stderr or result2.stderr}"
+                
+        elif project_type.lower() == "vite":
+            result = subprocess.run(["npm", "create", "vite@latest", project_name, "--template", "react"], 
+                                  capture_output=True, text=True, timeout=180)
+        else:
+            return f"Unsupported project type: {project_type}. Use 'react', 'nextjs', 'express', or 'vite'"
+        
+        if result.returncode == 0:
+            return f"{project_type.title()} project '{project_name}' created successfully:\n{result.stdout}"
+        else:
+            return f"Failed to create {project_type} project '{project_name}':\n{result.stderr}"
+            
+    except subprocess.TimeoutExpired:
+        return f"Project creation for '{project_name}' timed out"
+    except Exception as e:
+        return f"Error creating project: {str(e)}"
     
 available_tools = {
     "run_command": run_command,
@@ -348,7 +370,7 @@ messages = [
 ]
 
 def main():
-    print("🤖 Mini-Claude JavaScript Full-Stack Coding Agent initialized!")
+    print("🤖 Claude JavaScript Full-Stack Coding Agent initialized!")
     print("I'm here to help you build modern web applications with React, Node.js, Express, and more!")
     print("Type 'exit' to quit.\n")
     
