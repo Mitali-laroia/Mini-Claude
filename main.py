@@ -15,7 +15,7 @@ messages = [
 ]
 
 def main():
-    print("🤖 Claude JavaScript Full-Stack Coding Agent initialized!")
+    print("🤖 Mini-Cursor Full-Stack Coding Agent initialized!")
     print("I'm here to help you build modern web applications with React, Node.js, Express, and more!")
     print("Type 'exit' to quit.\n")
     
